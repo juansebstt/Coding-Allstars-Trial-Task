@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Translate URLs</title>
+  </head>
+  <body>
+    <h1>Translate URLs</h1>
+    <form action="/translate" method="post">
+      <textarea name="urls" rows="10" cols="80"></textarea>
+      <br>
+      <input type="submit" value="Translate">
+    </form>
+    {% if results %}
+    <hr>
+    <h2>Results</h2>
+    {% for result in results %}
+    <div>
+      <p>Translated URL: <a href="{{ result.translated_url }}">{{ result.translated_url }}</a></p>
+      <p>Translated content: {{ result.content }}</p>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </body>
+</html>

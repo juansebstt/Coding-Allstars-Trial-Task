@@ -1,37 +1,40 @@
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, Request, Form
+from typing import List
+import requests
+from bs4 import BeautifulSoup
+from googletrans import Translator
 from pydantic import BaseModel
-from extract import *
-import os
+from fastapi.responses import HTMLResponse
+from starlette.templating import Jinja2Templates
 
-
-SECRET = os.getenv("SECRET")
-
-#
 app = FastAPI()
 
-class Msg(BaseModel):
-    msg: str
-    secret: str
+templates = Jinja2Templates(directory="")
+
+
+class URLList(BaseModel):
+    urls: List[str]
+
 
 @app.get("/")
-
-async def root():
-    return {"message": "Hello World. Welcome to FastAPI!"}
-
-
-@app.get("/homepage")
-async def demo_get():
-    driver=createDriver()
-
-    homepage = getGoogleHomepage(driver)
-    driver.close()
-    return homepage
-
-@app.post("/backgroundDemo")
-async def demo_post(inp: Msg, background_tasks: BackgroundTasks):
-    
-    background_tasks.add_task(doBackgroundTask, inp)
-    return {"message": "Success, background task started"}
-    
+async def read_form(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
+@app.post("/translate", response_class=HTMLResponse)
+async def translate_urls(request: Request, urls: str = Form(...)):
+    results = []
+    translator = Translator(service_urls=['translate.googleapis.com'])
+
+    urls = urls.strip().split('\n')
+    for url in urls:
+        page = requests.get(url)
+        soup = BeautifulSoup(page.content, 'html.parser')
+        text = soup.get_text()
+        translated_text = translator.translate(text, dest='hi').text
+        translated_url = f'https://translate.google.com/translate?sl=auto&tl=hi&u=%7Burl%7D'
+        result = {'url': url, 'translated_url': translated_url, 'content': translated_text}
+        results.append(result)
+
+    template = templates.get_template("index.html")
+    return template.render(request=request, results=results)
